@@ -56,14 +56,12 @@ def main():
                 if fixture_id in sent_ids:
                     continue
 
-                # Ovo bi u pravilu koristilo kvote, ali ih često nema live besplatno
-                # Pa ovdje simuliramo ako favorit gubi
                 if home["winner"] is False or away["winner"] is False:
                     losing_team = home if home["winner"] is False else away
-                 message = (
-    f"📉 Favorit gubi!\n"
-    f"{home['name']} {match['goals']['home']} - {match['goals']['away']} {away['name']}"
-)
+                    message = (
+                        f"📉 Favorit gubi!\n"
+                        f"{home['name']} {match['goals']['home']} - {match['goals']['away']} {away['name']}"
+                    )
 
                     send_message(bot, user_id, message)
                     sent_ids.add(fixture_id)
