@@ -1,8 +1,8 @@
 {
-  {
   "telegram_bot_token": "8295114620:AAGO2iVpSwF8ZA7lo-3b5crZ9k72XlHuQoc",
   "user_id": "7247707825",
-  "api_football_key": "d2da9be9a15b12cc0e56513b2217644e"
+  "api_football_key": "d2da9be9a15b12cc0e56513b2217644e",
   "min_odds": 1.01,
   "max_odds": 1.50
 }
+
