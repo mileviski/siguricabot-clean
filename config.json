@@ -1,0 +1,7 @@
+{
+  "api_football_key": "OVDJE_STAVI_API_FOOTBALL_KLJUC",
+  "telegram_bot_token": "OVDJE_STAVI_TELEGRAM_BOT_TOKEN",
+  "user_id": 7247707825,
+  "min_odds": 1.01,
+  "max_odds": 1.50
+}
