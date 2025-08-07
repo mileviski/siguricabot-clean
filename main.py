@@ -60,7 +60,8 @@ def main():
                 # Pa ovdje simuliramo ako favorit gubi
                 if home["winner"] is False or away["winner"] is False:
                     losing_team = home if home["winner"] is False else away
-                    message = f"📉 Favorit gubi!
+                    message = f"📉 Favorit gubi!\n\n⚽ {home_team} {home_score} - {away_score} {away_team}\n📅 {match_time}"
+
 
 {home['name']} {match['goals']['home']} - {match['goals']['away']} {away['name']}"
                     send_message(bot, user_id, message)
