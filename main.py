@@ -60,7 +60,7 @@ def main():
                 # Pa ovdje simuliramo ako favorit gubi
                 if home["winner"] is False or away["winner"] is False:
                     losing_team = home if home["winner"] is False else away
-                  "message = (
+                 message = (
     f"📉 Favorit gubi!\n"
     f"{home['name']} {match['goals']['home']} - {match['goals']['away']} {away['name']}"
 )
