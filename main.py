@@ -41,3 +41,22 @@ def main():
 
                 if fixture_id in sent_ids:
                     continue
+
+                if home["winner"] is False or away["winner"] is False:
+                    message = (
+                        f"📉 Favorit gubi!\n"
+                        f"{home['name']} {match['goals']['home']} - {match['goals']['away']} {away['name']}"
+                    )
+                    send_message(bot, user_id, message)
+                    sent_ids.add(fixture_id)
+
+        except Exception as e:
+            print("❌ Greška:", e)
+
+        time.sleep(60)
+
+if __name__ == "__main__":
+    main()
+
+
+             
