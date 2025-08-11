@@ -5,26 +5,11 @@
   "min_odds": 1.01,
   "max_odds": 1.50,
   "allowed_leagues": [
-    39,   // Premier League
-    140,  // La Liga
-    78,   // Bundesliga
-    135,  // Serie A
-    61,   // Ligue 1
-    94,   // Primeira Liga
-    88,   // Eredivisie
-    203,  // Super Lig
-    2,    // Champions League
-    3,    // Europa League
-    848,  // Conference League
-    144,  // Belgian Pro League
-    179,  // Scottish Premiership
-    141,  // Segunda Division
-    207,  // Swiss Super League
-    169,  // Greek Super League
-    235,  // Austrian Bundesliga
-    218,  // Danish Superliga
-    384,  // Czech First League
-    210   // Norwegian Eliteserien
+    39, 140, 135, 78, 61,
+    2, 3, 848, 94, 88,
+    203, 143, 141, 42, 45,
+    144, 795, 307, 332, 233
   ]
 }
+
 
