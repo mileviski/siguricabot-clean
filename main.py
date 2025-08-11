@@ -29,15 +29,21 @@ def api_get(path, params, api_key, timeout=20):
         return []
 
 def get_today_fixtures_for_leagues(league_ids, api_key):
-    today = datetime.now(timezone.utc).date().isoformat()  # UTC
+    # API-Football radi po UTC-u
+    today = datetime.now(timezone.utc).date().isoformat()
     fixtures = api_get("/fixtures", {"date": today}, api_key)
     return [m for m in fixtures if m.get("league", {}).get("id") in league_ids]
 
-def parse_match_winner_odds(bookmakers, home_name, away_name):
-    home_odd = None
-    away_odd = None
-    for bookmaker in bookmakers or []:
-        for bet in bookmaker.get("bets", []):
+def best_match_winner(bookmakers, home_name, away_name):
+    """
+    Vrati najbolju (najnižu) kvotu za Home i Away + ime kladionice.
+    Output: (home_odd, home_bm, away_odd, away_bm)
+    """
+    home_odd, home_bm = None, None
+    away_odd, away_bm = None, None
+    for bm in bookmakers or []:
+        bm_name = bm.get("name")
+        for bet in bm.get("bets", []):
             if bet.get("name") == "Match Winner":
                 for v in bet.get("values", []):
                     label = (v.get("value") or "").strip().lower()
@@ -46,34 +52,35 @@ def parse_match_winner_odds(bookmakers, home_name, away_name):
                     except:
                         continue
                     if label in ("home", "1") or v.get("value") == home_name:
-                        home_odd = odd if home_odd is None or odd < home_odd else home_odd
+                        if home_odd is None or odd < home_odd:
+                            home_odd, home_bm = odd, bm_name
                     elif label in ("away", "2") or v.get("value") == away_name:
-                        away_odd = odd if away_odd is None or odd < away_odd else away_odd
-    return home_odd, away_odd
+                        if away_odd is None or odd < away_odd:
+                            away_odd, away_bm = odd, bm_name
+    return home_odd, home_bm, away_odd, away_bm
 
-def get_prematch_odds_for_fixture(fixture_id, api_key):
-    # PRO: pre-match odds
+def get_prematch_bookmakers(fixture_id, api_key):
+    # PRO: pre-match kvote
     resp = api_get("/odds", {"fixture": fixture_id}, api_key)
-    bookmakers = []
+    out = []
     for item in resp:
-        bookmakers.extend(item.get("bookmakers", []))
-    return bookmakers
+        out.extend(item.get("bookmakers", []))
+    return out
 
-def get_live_odds_for_fixture(fixture_id, api_key):
-    # PRO: live odds (ako postoji pokupit ćemo ih; fallback na pre-match)
+def get_live_bookmakers(fixture_id, api_key):
+    # PRO: live kvote (ako postoje)
     resp = api_get("/odds/live", {"fixture": fixture_id}, api_key)
-    bookmakers = []
+    out = []
     for item in resp:
-        bookmakers.extend(item.get("bookmakers", []))
-    return bookmakers
+        out.extend(item.get("bookmakers", []))
+    return out
 
 def build_favorites_map(fixtures, api_key, max_odds):
     """
+    Napravi mapu favorita na temelju live kvota (ako postoje), inače pre-match.
     favorites[fixture_id] = {
-        "fav_team_id": int,
-        "fav_team_name": str,
-        "odd": float,
-        "league": str
+        "fav_team_id": int, "fav_team_name": str,
+        "odd": float, "bookmaker": str, "league": str
     }
     """
     favorites = {}
@@ -83,32 +90,36 @@ def build_favorites_map(fixtures, api_key, max_odds):
         away = fx["teams"]["away"]
         league_name = fx["league"]["name"]
 
-        # 1) probaj LIVE odds; 2) ako nema, uzmi pre-match
-        bookmakers = get_live_odds_for_fixture(fixture_id, api_key)
-        if not bookmakers:
-            bookmakers = get_prematch_odds_for_fixture(fixture_id, api_key)
+        # 1) pokušaj LIVE kvote; 2) fallback na pre-match
+        bms = get_live_bookmakers(fixture_id, api_key)
+        source = "LIVE"
+        if not bms:
+            bms = get_prematch_bookmakers(fixture_id, api_key)
+            source = "PRE"
 
-        if not bookmakers:
+        if not bms:
             continue
 
-        home_odd, away_odd = parse_match_winner_odds(bookmakers, home["name"], away["name"])
-        if home_odd is None and away_odd is None:
+        h_odd, h_bm, a_odd, a_bm = best_match_winner(bms, home["name"], away["name"])
+        if h_odd is None and a_odd is None:
             continue
 
+        # izaberi favorita po kvoti (niža kvota = veća vjerojatnost)
         fav = None
-        fav_odd = None
-        if home_odd is not None and (away_odd is None or home_odd <= away_odd):
+        fav_odd, fav_bm = None, None
+        if h_odd is not None and (a_odd is None or h_odd <= a_odd):
             fav = {"id": home["id"], "name": home["name"]}
-            fav_odd = home_odd
-        elif away_odd is not None:
+            fav_odd, fav_bm = h_odd, h_bm
+        elif a_odd is not None:
             fav = {"id": away["id"], "name": away["name"]}
-            fav_odd = away_odd
+            fav_odd, fav_bm = a_odd, a_bm
 
         if fav and fav_odd is not None and fav_odd <= max_odds:
             favorites[fixture_id] = {
                 "fav_team_id": fav["id"],
                 "fav_team_name": fav["name"],
                 "odd": fav_odd,
+                "bookmaker": fav_bm or source,  # ako nema imena BM, pokaži izvor
                 "league": league_name,
             }
     return favorites
@@ -127,19 +138,19 @@ def main():
     favorites = {}
     last_build = None
 
-    print("✅ PRO plan detektiran. Krećem s favoritskom mapom (kvote ≤ %.2f)..." % max_odds)
+    print(f"✅ Start. Filtriram lige: {len(allowed_leagues)} | limit kvote ≤ {max_odds:.2f}")
 
     while True:
         try:
-            # Obnovi favorite svakih 20 min (ili prvi put)
+            # Obnovi favorite svakih 20 min (novi parovi tijekom dana)
             now = datetime.now(timezone.utc)
             if last_build is None or (now - last_build) >= timedelta(minutes=20):
                 fixtures = get_today_fixtures_for_leagues(allowed_leagues, config["api_football_key"])
                 favorites = build_favorites_map(fixtures, config["api_football_key"], max_odds)
                 last_build = now
-                print(f"🗂️ Favoriti spremni: {len(favorites)} utakmica (≤ {max_odds})")
+                print(f"🗂️ Favoriti: {len(favorites)} fixture-a (kvota ≤ {max_odds:.2f})")
 
-            print("⏳ Provjeravam live utakmice...")
+            print("⏳ Live provjera…")
             lives = get_live_matches(config["api_football_key"]) or []
 
             for m in lives:
@@ -151,7 +162,7 @@ def main():
                 fx = m.get("fixture", {})
                 fixture_id = fx.get("id")
                 if fixture_id not in favorites:
-                    continue  # pratit ćemo samo fixture-e gdje je favorit ≤ max_odds
+                    continue  # pratim samo ako smo tog favorita ranije validirali po kvoti
 
                 goals = m.get("goals", {})
                 gh = goals.get("home") or 0
@@ -170,7 +181,7 @@ def main():
                     msg = (
                         "🚨 FAVORIT GUBI!\n\n"
                         f"🏆 {league.get('name')}\n"
-                        f"🧮 Kvota favorita (pre-match / live): {fav['odd']}\n"
+                        f"🧮 Kvota favorita: {fav['odd']} ({fav['bookmaker']})\n"
                         f"⚽ {home['name']} {gh} - {ga} {away['name']}\n"
                     )
                     if isinstance(minute, int):
