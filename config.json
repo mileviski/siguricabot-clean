@@ -3,6 +3,28 @@
   "user_id": "7247707825",
   "api_football_key": "d2da9be9a15b12cc0e56513b2217644e",
   "min_odds": 1.01,
-  "max_odds": 1.50
+  "max_odds": 1.50,
+  "allowed_leagues": [
+    39,   // Premier League
+    140,  // La Liga
+    78,   // Bundesliga
+    135,  // Serie A
+    61,   // Ligue 1
+    94,   // Primeira Liga
+    88,   // Eredivisie
+    203,  // Super Lig
+    2,    // Champions League
+    3,    // Europa League
+    848,  // Conference League
+    144,  // Belgian Pro League
+    179,  // Scottish Premiership
+    141,  // Segunda Division
+    207,  // Swiss Super League
+    169,  // Greek Super League
+    235,  // Austrian Bundesliga
+    218,  // Danish Superliga
+    384,  // Czech First League
+    210   // Norwegian Eliteserien
+  ]
 }
 

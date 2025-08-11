@@ -3,39 +3,15 @@ import time
 import json
 import telebot
 
-# Lista ID-ova liga iz API-Football
-LIGE = [
-    39,   # Premier League
-    140,  # La Liga
-    135,  # Serie A
-    78,   # Bundesliga
-    61,   # Ligue 1
-    2,    # Champions League
-    3,    # Europa League
-    848,  # Conference League
-    94,   # Primeira Liga (Portugal)
-    88,   # Eredivisie (Nizozemska)
-    203,  # Süper Lig (Turska)
-    143,  # Segunda Division (Španjolska)
-    141,  # Copa del Rey
-    42,   # FA Cup
-    45,   # Championship
-    144,  # EFL Cup
-    795,  # Hrvatska HNL
-    307,  # Belgijska Jupiler Pro League
-    332,  # Švicarska Super League
-    233   # Grčka Super League 1
-]
-
 def load_config():
     with open("config.json") as f:
         return json.load(f)
 
 def send_message(bot, user_id, text):
     try:
-        bot.send_message(chat_id=user_id, text=text)
+        bot.send_message(user_id, text)
     except Exception as e:
-        print("Greška pri slanju poruke:", e)
+        print("❌ Greška pri slanju poruke:", e)
 
 def get_live_matches(api_key):
     url = "https://v3.football.api-sports.io/fixtures?live=all"
@@ -51,6 +27,9 @@ def main():
     config = load_config()
     bot = telebot.TeleBot(config["telegram_bot_token"])
     user_id = config["user_id"]
+    allowed_leagues = set(config["allowed_leagues"])  # pretvaramo u set za bržu provjeru
+    min_odds = config["min_odds"]
+    max_odds = config["max_odds"]
 
     sent_ids = set()
 
@@ -59,25 +38,25 @@ def main():
         try:
             matches = get_live_matches(config["api_football_key"])
             for match in matches:
-                # Filtriramo samo željene lige
-                if match["league"]["id"] not in LIGE:
-                    continue
-
                 fixture_id = match["fixture"]["id"]
+                league_id = match["league"]["id"]
                 home = match["teams"]["home"]
                 away = match["teams"]["away"]
+
+                # preskačemo ako liga nije na listi
+                if league_id not in allowed_leagues:
+                    continue
 
                 if fixture_id in sent_ids:
                     continue
 
-                # Provjera ako favorit gubi (po trenutnom rezultatu)
+                # Provjera - favorit gubi (simulirano jer API free nema live kvote)
                 if home["winner"] is False or away["winner"] is False:
                     message = (
                         f"📉 Favorit gubi!\n"
                         f"{home['name']} {match['goals']['home']} - {match['goals']['away']} {away['name']}\n"
-                        f"Liga: {match['league']['name']}"
+                        f"🏆 Liga: {match['league']['name']}"
                     )
-
                     send_message(bot, user_id, message)
                     sent_ids.add(fixture_id)
 
@@ -88,6 +67,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 
 
 
